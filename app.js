@@ -116,7 +116,12 @@ processButton.addEventListener('click', async () => {
                         
                         // Match date format MM/DD/YYYY
                         if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                            console.log('Found transaction:', { date, description, amount });
+                            console.log('Found transaction:', { 
+                                date, 
+                                description, 
+                                amount,
+                                parsedAmount: parseAmount(amount)
+                            });
                             transactions.push({
                                 date: formatDate(date),
                                 description: description.trim(),
@@ -150,12 +155,20 @@ processButton.addEventListener('click', async () => {
 // Format date for QIF (MM/DD/YYYY)
 function formatDate(dateStr) {
     const [month, day, year] = dateStr.split('/');
-    return `${month}/${day}/20${year}`;
+    return `${month}/${day}/${year}`;
 }
 
 // Parse amount string to number
 function parseAmount(amountStr) {
-    return parseFloat(amountStr.replace(/[$,]/g, ''));
+    const cleanAmount = amountStr.replace(/[$,]/g, '');
+    const amount = parseFloat(cleanAmount);
+    
+    if (isNaN(amount)) {
+        console.error('Failed to parse amount:', amountStr);
+        return 0;
+    }
+    
+    return amount;
 }
 
 // Generate QIF content
