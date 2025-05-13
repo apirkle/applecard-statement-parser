@@ -117,11 +117,13 @@ processButton.addEventListener('click', async () => {
                         // Match date format MM/DD/YYYY
                         if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
                             const parsedAmount = parseAmount(amount);
-                            // Negate the amount for charges (non-payment transactions)
+                            // For credit card QIF:
+                            // - Payments should be negative (money going out of the credit card account)
+                            // - Charges should be positive (money going into the credit card account)
                             const isPayment = description.toLowerCase().includes('payment') || 
                                              description.toLowerCase().includes('deposit') ||
                                              description.toLowerCase().includes('credit');
-                            const finalAmount = isPayment ? parsedAmount : -parsedAmount;
+                            const finalAmount = isPayment ? -parsedAmount : parsedAmount;
                             
                             console.log('Found transaction:', { 
                                 date, 
