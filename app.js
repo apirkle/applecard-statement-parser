@@ -79,25 +79,63 @@ processButton.addEventListener('click', async () => {
         const transactions = [];
         
         for (const [fileName, file] of selectedFiles) {
+            console.log(`Processing file: ${fileName}`);
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             
             for (let i = 1; i <= pdf.numPages; i++) {
+                console.log(`Processing page ${i}`);
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 const text = textContent.items.map(item => item.str).join(' ');
                 
-                // Extract transactions from the text
-                const pageTransactions = extractTransactions(text);
-                transactions.push(...pageTransactions);
+                // Look for transaction sections by cardholder
+                const sections = text.split(/Transactions by (?:Adam|Brie) Pirkle/);
+                
+                for (const section of sections) {
+                    if (!section.includes('Date   Description   Daily Cash   Amount')) continue;
+                    
+                    // Split into lines and filter out empty lines
+                    const lines = section.split(/\s{2,}/).filter(line => line.trim());
+                    
+                    // Process transactions in groups of 5 lines
+                    for (let i = 0; i < lines.length - 4; i++) {
+                        const date = lines[i];
+                        const description = lines[i + 1];
+                        const dailyCashPercent = lines[i + 2];
+                        const dailyCashAmount = lines[i + 3];
+                        const amount = lines[i + 4];
+                        
+                        // Skip if any of these lines are headers or totals
+                        if (date.includes('Date') || 
+                            description.includes('Description') || 
+                            dailyCashPercent.includes('Daily Cash') || 
+                            amount.includes('Total')) {
+                            continue;
+                        }
+                        
+                        // Match date format MM/DD/YYYY
+                        if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                            console.log('Found transaction:', { date, description, amount });
+                            transactions.push({
+                                date: formatDate(date),
+                                description: description.trim(),
+                                amount: parseAmount(amount)
+                            });
+                        }
+                    }
+                }
             }
         }
+        
+        console.log('All transactions found:', transactions);
         
         // Sort transactions by date
         transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
         
         // Generate and download QIF file
         const qifContent = generateQIF(transactions);
+        console.log('Generated QIF content:', qifContent);
         downloadQIF(qifContent);
         
     } catch (error) {
@@ -108,35 +146,6 @@ processButton.addEventListener('click', async () => {
         processButton.textContent = 'Process Statements';
     }
 });
-
-// Extract transactions from PDF text
-function extractTransactions(text) {
-    const transactions = [];
-    
-    // Regular expression to match transaction lines
-    // Format: MM/DD/YY Description Amount
-    const transactionPattern = /(\d{2}\/\d{2}\/\d{2})\s+([A-Za-z0-9\s\-\.]+?)\s+([-+]?\$[\d,]+\.\d{2})/g;
-    
-    let match;
-    while ((match = transactionPattern.exec(text)) !== null) {
-        const [_, date, description, amount] = match;
-        
-        // Skip if this looks like a header or summary line
-        if (description.toLowerCase().includes('daily cash') || 
-            description.toLowerCase().includes('payment') ||
-            description.toLowerCase().includes('balance')) {
-            continue;
-        }
-        
-        transactions.push({
-            date: formatDate(date),
-            description: description.trim(),
-            amount: parseAmount(amount)
-        });
-    }
-    
-    return transactions;
-}
 
 // Format date for QIF (YYYYMMDD)
 function formatDate(dateStr) {
