@@ -116,16 +116,26 @@ processButton.addEventListener('click', async () => {
                         
                         // Match date format MM/DD/YYYY
                         if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                            const parsedAmount = parseAmount(amount);
+                            // Negate the amount for charges (non-payment transactions)
+                            const isPayment = description.toLowerCase().includes('payment') || 
+                                             description.toLowerCase().includes('deposit') ||
+                                             description.toLowerCase().includes('credit');
+                            const finalAmount = isPayment ? parsedAmount : -parsedAmount;
+                            
                             console.log('Found transaction:', { 
                                 date, 
                                 description, 
                                 amount,
-                                parsedAmount: parseAmount(amount)
+                                parsedAmount,
+                                isPayment,
+                                finalAmount
                             });
+                            
                             transactions.push({
                                 date: formatDate(date),
                                 description: description.trim(),
-                                amount: parseAmount(amount)
+                                amount: finalAmount
                             });
                         }
                     }
