@@ -147,10 +147,10 @@ processButton.addEventListener('click', async () => {
     }
 });
 
-// Format date for QIF (YYYYMMDD)
+// Format date for QIF (MM/DD/YYYY)
 function formatDate(dateStr) {
     const [month, day, year] = dateStr.split('/');
-    return `20${year}${month}${day}`;
+    return `${month}/${day}/20${year}`;
 }
 
 // Parse amount string to number
